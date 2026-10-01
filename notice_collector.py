@@ -108,8 +108,9 @@ def read_detail(page, url, max_chars):
     return body, files, find_date(page.inner_text("body"))
 
 
-def render_post(board, item, body, files, footer):
-    out = [f"[{board['org']} {board['label']}] {item['title']}", ""]
+def render_post(board, item, body, files, footer, category):
+    out = [f"카테고리: {category}"] if category else []
+    out += [f"[{board['org']} {board['label']}] {item['title']}", ""]
     out.append(f"게시일: {item['date'] or '원문 참조'}")
     out.append(f"출처: {board['org']} {board['name']}")
     out.append(f"원문: {item['url']}")
@@ -165,7 +166,7 @@ def collect(dry_run=False):
                 pid = post_id(it["url"], board["id_param"])
                 date_tag = (it["date"] or "0000-00-00").replace("-", "")
                 path = POSTS_DIR / f"00_news_{date_tag}_{board['key']}_{pid}.md"
-                path.write_text(render_post(board, it, body, files, cfg.get("footer", "")), encoding="utf-8")
+                path.write_text(render_post(board, it, body, files, cfg.get("footer", ""), board.get("category", cfg.get("category"))), encoding="utf-8")
                 seen.add(f"{board['key']}:{pid}")
                 created += 1
         browser.close()
