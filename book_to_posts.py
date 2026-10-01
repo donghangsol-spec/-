@@ -14,6 +14,7 @@ from pathlib import Path
 
 POSTS_DIR = Path(__file__).resolve().parent / "posts"
 SERIES = "평가바이블365 [방문요양] 1. 행동편"
+CATEGORY = "평가바이블365 연재"
 FOOTER = "장기요양기관 평가·청구 실무 문의: 동행솔루션 042-673-3338 / donghangsol@naver.com"
 
 CHAPTER_RE = re.compile(r"^## (\d+) (.+)$")
@@ -71,6 +72,7 @@ def build(manuscript):
     total = len(chapters)
     for n, (title, body) in sorted(chapters.items()):
         parts = [
+            f"카테고리: {CATEGORY}",
             f"[평가바이블365 연재 {n}화] {title}",
             "",
             f"장기요양기관의 실무지침서 『{SERIES}』 연재 {n}/{total}화입니다.",
