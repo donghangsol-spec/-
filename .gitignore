@@ -1,0 +1,5 @@
+# Naver login session (contains cookies, never commit)
+auth/
+.env
+__pycache__/
+*.pyc
