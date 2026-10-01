@@ -1,11 +1,11 @@
-"""보건복지부 고시·공지사항·자료실 새 글을 수집해 posts/ 대기열에 블로그 글로 만든다.
+"""보건복지부·국민건강보험공단(노인장기요양보험) 게시판 새 글을 수집해 posts/ 대기열에 블로그 글로 만든다.
 
 sources.json 의 게시판 목록 첫 페이지(들)를 읽고, 제목에 키워드가 들어간 새 글만
-본문·첨부파일 목록과 원문 링크를 붙여 posts/00_mohw_*.md 로 저장한다.
+본문·첨부파일 목록과 원문 링크를 붙여 posts/00_news_*.md 로 저장한다.
 이미 수집한 글은 data/seen.json 에 기록해 다시 만들지 않는다.
 
-    python mohw_collector.py            # 수집해서 posts/ 에 저장
-    python mohw_collector.py --dry-run  # 찾은 글 목록만 출력 (저장 안 함)
+    python notice_collector.py            # 수집해서 posts/ 에 저장
+    python notice_collector.py --dry-run  # 찾은 글 목록만 출력 (저장 안 함)
 """
 
 import argparse
@@ -50,9 +50,9 @@ def load_json(path, default):
         return default
 
 
-def post_id(url):
+def post_id(url, param):
     q = parse_qs(urlparse(url).query)
-    return q.get("list_no", [url])[0]
+    return q.get(param, [url])[0]
 
 
 def clean_title(title):
@@ -72,9 +72,9 @@ def find_date(text):
 def list_items(page, board, pages):
     items, seen_urls = [], set()
     for n in range(1, pages + 1):
-        page.goto(f"{board['url']}&nPage={n}", wait_until="domcontentloaded")
+        page.goto(f"{board['url']}&{board['page_param']}={n}", wait_until="domcontentloaded")
         page.wait_for_timeout(1500)
-        for it in page.eval_on_selector_all("a[href*='act=view'][href*='list_no=']", LIST_JS):
+        for it in page.eval_on_selector_all(board["link_selector"], LIST_JS):
             title = clean_title(it["title"])
             if not title or it["href"] in seen_urls:
                 continue
@@ -109,9 +109,9 @@ def read_detail(page, url, max_chars):
 
 
 def render_post(board, item, body, files, footer):
-    out = [f"[보건복지부 {board['label']}] {item['title']}", ""]
+    out = [f"[{board['org']} {board['label']}] {item['title']}", ""]
     out.append(f"게시일: {item['date'] or '원문 참조'}")
-    out.append(f"출처: 보건복지부 {board['name']}")
+    out.append(f"출처: {board['org']} {board['name']}")
     out.append(f"원문: {item['url']}")
     out.append("")
     if body:
@@ -120,7 +120,7 @@ def render_post(board, item, body, files, footer):
         out.append("첨부파일 (원문 링크에서 내려받을 수 있습니다)")
         out += [f"- {f}" for f in files]
         out.append("")
-    out.append("※ 이 글은 보건복지부 누리집에 게시된 공식 자료를 안내하기 위한 글입니다. "
+    out.append(f"※ 이 글은 {board['org']} 누리집에 게시된 공식 자료를 안내하기 위한 글입니다. "
                "정확한 내용과 시행일은 반드시 원문을 확인해 주세요.")
     if footer:
         out += ["", footer]
@@ -141,16 +141,16 @@ def collect(dry_run=False):
             try:
                 items = list_items(page, board, cfg.get("pages", 1))
             except Exception as e:
-                print(f"[ERROR] {board['name']} 목록을 읽지 못했습니다: {e}")
+                print(f"[ERROR] {board['org']} {board['name']} 목록을 읽지 못했습니다: {e}")
                 continue
             if not items:
-                print(f"[WARN] {board['name']}: 글 목록을 찾지 못했습니다. 게시판 주소나 구조가 바뀌었는지 확인하세요.")
+                print(f"[WARN] {board['org']} {board['name']}: 글 목록을 찾지 못했습니다. 게시판 주소나 구조가 바뀌었는지 확인하세요.")
                 continue
 
             keywords = board.get("keywords") or []
             matched = [it for it in items if not keywords or any(k in it["title"] for k in keywords)]
-            new = [it for it in matched if f"{board['key']}:{post_id(it['url'])}" not in seen]
-            print(f"[INFO] {board['name']}: 목록 {len(items)}건, 키워드 일치 {len(matched)}건, 새 글 {len(new)}건")
+            new = [it for it in matched if f"{board['key']}:{post_id(it['url'], board['id_param'])}" not in seen]
+            print(f"[INFO] {board['org']} {board['name']}: 목록 {len(items)}건, 키워드 일치 {len(matched)}건, 새 글 {len(new)}건")
 
             for it in reversed(new):  # 오래된 글부터 대기열에 넣는다
                 print(f"       - {it['date'] or '날짜?'} {it['title']}")
@@ -162,9 +162,9 @@ def collect(dry_run=False):
                     print(f"[ERROR]   본문을 읽지 못했습니다: {e}")
                     continue
                 it["date"] = it["date"] or page_date
-                pid = post_id(it["url"])
+                pid = post_id(it["url"], board["id_param"])
                 date_tag = (it["date"] or "0000-00-00").replace("-", "")
-                path = POSTS_DIR / f"00_mohw_{date_tag}_{board['key']}_{pid}.md"
+                path = POSTS_DIR / f"00_news_{date_tag}_{board['key']}_{pid}.md"
                 path.write_text(render_post(board, it, body, files, cfg.get("footer", "")), encoding="utf-8")
                 seen.add(f"{board['key']}:{pid}")
                 created += 1
@@ -178,6 +178,6 @@ def collect(dry_run=False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="보건복지부 고시·공지·자료실 수집")
+    parser = argparse.ArgumentParser(description="보건복지부·건강보험공단 게시판 새 글 수집")
     parser.add_argument("--dry-run", action="store_true", help="찾은 글 목록만 출력")
     collect(parser.parse_args().dry_run)

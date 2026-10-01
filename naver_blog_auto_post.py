@@ -5,9 +5,9 @@
          python naver_blog_auto_post.py --login
     2) 즉시 1건 발행 테스트
          python naver_blog_auto_post.py --once
-    3) 스케줄러 실행 (09:00 / 14:00 / 20:00 발행, 08:00 보건복지부 새 글 수집)
+    3) 스케줄러 실행 (09:00 / 14:00 / 20:00 발행, 08:00 새 글 수집)
          python naver_blog_auto_post.py
-    4) 보건복지부 고시·공지·자료실 새 글 수집만 실행
+    4) 보건복지부·건강보험공단 게시판 새 글 수집만 실행
          python naver_blog_auto_post.py --collect
 
 posts/ 폴더의 *.md 파일을 이름순으로 하나씩 발행하고, 발행된 파일은
@@ -26,7 +26,7 @@ import schedule
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
-from mohw_collector import collect
+from notice_collector import collect
 
 NAVER_ID = os.environ.get("NAVER_ID", "donghangsol")
 HEADLESS = os.environ.get("HEADLESS", "0") == "1"
@@ -173,7 +173,7 @@ def safe_collect():
     try:
         collect()
     except Exception as e:
-        print(f"[ERROR] 보건복지부 글 수집 실패: {e}")
+        print(f"[ERROR] 게시판 글 수집 실패: {e}")
 
 
 def show_status():
@@ -212,7 +212,7 @@ def main():
     parser.add_argument("--login", action="store_true", help="직접 로그인하여 세션 저장")
     parser.add_argument("--once", action="store_true", help="즉시 1건 발행 후 종료")
     parser.add_argument("--dry-run", action="store_true", help="글을 에디터에 입력하고 스크린샷만 저장 (발행 안 함)")
-    parser.add_argument("--collect", action="store_true", help="보건복지부 고시·공지·자료실 새 글을 posts/ 에 수집")
+    parser.add_argument("--collect", action="store_true", help="보건복지부·건강보험공단 새 글을 posts/ 에 수집")
     parser.add_argument("--status", action="store_true", help="대기열과 예상 발행 일정 표시")
     args = parser.parse_args()
 
