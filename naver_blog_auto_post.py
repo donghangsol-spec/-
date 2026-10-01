@@ -16,7 +16,6 @@ import argparse
 import os
 import random
 import shutil
-import sys
 import time
 from pathlib import Path
 
@@ -24,7 +23,7 @@ import schedule
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
-NAVER_ID = os.environ.get("NAVER_ID", "YOUR_NAVER_ID")
+NAVER_ID = os.environ.get("NAVER_ID", "donghangsol")
 HEADLESS = os.environ.get("HEADLESS", "0") == "1"
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -159,9 +158,6 @@ def main():
     parser.add_argument("--login", action="store_true", help="직접 로그인하여 세션 저장")
     parser.add_argument("--once", action="store_true", help="즉시 1건 발행 후 종료")
     args = parser.parse_args()
-
-    if NAVER_ID == "YOUR_NAVER_ID":
-        sys.exit("[ERROR] 환경변수 NAVER_ID 를 설정하세요. 예) export NAVER_ID=myblogid")
 
     if args.login:
         login_once()

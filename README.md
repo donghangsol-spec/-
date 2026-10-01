@@ -2,12 +2,13 @@
 
 `posts/` 폴더의 글을 하루 3회(09:00, 14:00, 20:00) 네이버 블로그에 하나씩 발행합니다.
 
+대상 블로그: https://blog.naver.com/donghangsol (다른 블로그는 `NAVER_ID` 환경변수로 지정)
+
 ## 설치
 
 ```bash
 pip install -r requirements.txt
 playwright install chromium
-export NAVER_ID=내블로그아이디
 ```
 
 ## 사용
