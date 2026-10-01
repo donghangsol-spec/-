@@ -17,6 +17,7 @@ import os
 import random
 import shutil
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import schedule
@@ -77,7 +78,7 @@ def dismiss_if_present(frame, selector, timeout=3000):
         pass
 
 
-def write_and_publish(page, title, body):
+def write_and_publish(page, title, body, dry_run=False):
     page.goto(f"https://blog.naver.com/{NAVER_ID}?Redirect=Write")
     page.wait_for_load_state("domcontentloaded")
 
@@ -107,6 +108,11 @@ def write_and_publish(page, title, body):
             page.keyboard.type(line, delay=random.randint(20, 50))
     pause(1.5, 2.5)
 
+    if dry_run:
+        shot = BASE_DIR / f"preview_{time.strftime('%Y%m%d_%H%M%S')}.png"
+        page.screenshot(path=str(shot), full_page=True)
+        return shot.name
+
     # 발행 → 발행 확인
     editor.locator("button[class*='publish_btn']").first.click()
     pause()
@@ -116,8 +122,9 @@ def write_and_publish(page, title, body):
     return page.url
 
 
-def run_auto_post():
-    print(f"[INFO] {time.strftime('%Y-%m-%d %H:%M')} 네이버 블로그 자동 포스팅 시작...")
+def run_auto_post(dry_run=False):
+    mode = "미리보기(발행 안 함)" if dry_run else "자동 포스팅"
+    print(f"[INFO] {time.strftime('%Y-%m-%d %H:%M')} 네이버 블로그 {mode} 시작...")
     if not AUTH_FILE.exists():
         print("[ERROR] 저장된 세션이 없습니다. 먼저 --login 을 실행하세요.")
         return
@@ -137,7 +144,7 @@ def run_auto_post():
         context = browser.new_context(viewport=VIEWPORT, storage_state=str(AUTH_FILE))
         page = context.new_page()
         try:
-            url = write_and_publish(page, title, body)
+            url = write_and_publish(page, title, body, dry_run)
             # 갱신된 쿠키 저장 (세션 수명 연장)
             context.storage_state(path=str(AUTH_FILE))
         except Exception as e:
@@ -148,16 +155,60 @@ def run_auto_post():
         finally:
             browser.close()
 
+    if dry_run:
+        print(f"[INFO] 미리보기 완료: '{title}' → {url} (글은 발행되지 않았고 대기열에 그대로 남아 있습니다)")
+        return
+
     PUBLISHED_DIR.mkdir(parents=True, exist_ok=True)
     shutil.move(str(path), PUBLISHED_DIR / path.name)
     print(f"[INFO] 발행 완료: '{title}' → {url}")
+
+
+def show_status():
+    """대기 중인 글 목록과 각 글의 예상 발행 시각을 보여준다."""
+    queue = sorted(f for f in POSTS_DIR.glob("*.md") if f.is_file())
+    published = list(PUBLISHED_DIR.glob("*.md")) if PUBLISHED_DIR.exists() else []
+    print(f"블로그: https://blog.naver.com/{NAVER_ID}")
+    print(f"세션: {'저장됨' if AUTH_FILE.exists() else '없음 (--login 필요)'}")
+    print(f"발행 완료 {len(published)}건 / 대기 {len(queue)}건\n")
+
+    now = datetime.now()
+    slots = []
+    day = now.date()
+    while len(slots) < len(queue):
+        for t in SCHEDULE_TIMES:
+            h, m = map(int, t.split(":"))
+            slot = datetime.combine(day, datetime.min.time()).replace(hour=h, minute=m)
+            if slot > now and len(slots) < len(queue):
+                slots.append(slot)
+        day += timedelta(days=1)
+
+    weekdays = "월화수목금토일"
+    for f, slot in zip(queue, slots):
+        lines = f.read_text(encoding="utf-8").splitlines()
+        title = lines[0].strip() if lines else "(제목 없음)"
+        print(f"  {slot:%m/%d}({weekdays[slot.weekday()]}) {slot:%H:%M}  {title}  [{f.name}]")
+
+    if queue:
+        print(f"\n대기열은 {slots[-1]:%m/%d %H:%M} 발행분까지입니다.")
+    else:
+        print("대기 중인 글이 없습니다. posts/ 폴더에 .md 파일을 추가하세요.")
 
 
 def main():
     parser = argparse.ArgumentParser(description="네이버 블로그 자동 발행")
     parser.add_argument("--login", action="store_true", help="직접 로그인하여 세션 저장")
     parser.add_argument("--once", action="store_true", help="즉시 1건 발행 후 종료")
+    parser.add_argument("--dry-run", action="store_true", help="글을 에디터에 입력하고 스크린샷만 저장 (발행 안 함)")
+    parser.add_argument("--status", action="store_true", help="대기열과 예상 발행 일정 표시")
     args = parser.parse_args()
+
+    if args.status:
+        show_status()
+        return
+    if args.dry_run:
+        run_auto_post(dry_run=True)
+        return
 
     if args.login:
         login_once()

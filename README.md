@@ -15,7 +15,9 @@ playwright install chromium
 
 ```bash
 python naver_blog_auto_post.py --login   # 최초 1회: 브라우저에서 직접 로그인 → auth/ 에 세션 저장
-python naver_blog_auto_post.py --once    # 1건 즉시 발행 (테스트)
+python naver_blog_auto_post.py --status  # 대기열과 각 글의 예상 발행 시각 확인
+python naver_blog_auto_post.py --dry-run # 에디터에 입력만 하고 preview_*.png 저장 (발행 안 함)
+python naver_blog_auto_post.py --once    # 1건 즉시 발행
 python naver_blog_auto_post.py           # 스케줄러 실행
 ```
 
