@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 preview_*.png
 error_*.png
+data/

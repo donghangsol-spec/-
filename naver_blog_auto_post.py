@@ -5,11 +5,14 @@
          python naver_blog_auto_post.py --login
     2) 즉시 1건 발행 테스트
          python naver_blog_auto_post.py --once
-    3) 스케줄러 실행 (09:00 / 14:00 / 20:00)
+    3) 스케줄러 실행 (09:00 / 14:00 / 20:00 발행, 08:00 새 글 수집)
          python naver_blog_auto_post.py
+    4) 보건복지부·건강보험공단 게시판 새 글 수집만 실행
+         python naver_blog_auto_post.py --collect
 
 posts/ 폴더의 *.md 파일을 이름순으로 하나씩 발행하고, 발행된 파일은
 posts/published/ 로 옮긴다. 파일 첫 줄은 제목, 나머지는 본문.
+첫 줄을 "카테고리: 이름" 으로 쓰면 그 카테고리에 발행한다(제목은 다음 줄).
 """
 
 import argparse
@@ -24,6 +27,8 @@ import schedule
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import sync_playwright
 
+from notice_collector import collect
+
 NAVER_ID = os.environ.get("NAVER_ID", "donghangsol")
 HEADLESS = os.environ.get("HEADLESS", "0") == "1"
 
@@ -33,6 +38,7 @@ POSTS_DIR = BASE_DIR / "posts"
 PUBLISHED_DIR = POSTS_DIR / "published"
 
 SCHEDULE_TIMES = ["09:00", "14:00", "20:00"]
+COLLECT_TIME = "08:00"
 VIEWPORT = {"width": 1280, "height": 1024}
 
 
@@ -58,16 +64,25 @@ def login_once():
     print(f"[INFO] 세션 저장 완료: {AUTH_FILE}")
 
 
+def parse_post(path):
+    """(카테고리 또는 None, 제목, 본문) 을 돌려준다."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    category = None
+    if lines and lines[0].startswith("카테고리:"):
+        category = lines.pop(0).split(":", 1)[1].strip() or None
+    title = lines[0].strip() if lines else ""
+    body = "\n".join(lines[1:]).strip()
+    return category, title, body
+
+
 def next_post():
     files = sorted(f for f in POSTS_DIR.glob("*.md") if f.is_file())
     if not files:
         return None
-    lines = files[0].read_text(encoding="utf-8").splitlines()
-    title = lines[0].strip() if lines else ""
-    body = "\n".join(lines[1:]).strip()
+    category, title, body = parse_post(files[0])
     if not title:
-        raise ValueError(f"{files[0].name}: 첫 줄(제목)이 비어 있습니다.")
-    return files[0], title, body
+        raise ValueError(f"{files[0].name}: 제목 줄이 비어 있습니다.")
+    return files[0], category, title, body
 
 
 def dismiss_if_present(frame, selector, timeout=3000):
@@ -78,7 +93,19 @@ def dismiss_if_present(frame, selector, timeout=3000):
         pass
 
 
-def write_and_publish(page, title, body, dry_run=False):
+def select_category(editor, category):
+    """발행 설정 창에서 카테고리를 고른다. 블로그에 같은 이름의 카테고리가 있어야 한다."""
+    editor.locator("button[class*='selectbox_button']").first.click()
+    pause(0.5, 1.0)
+    option = editor.get_by_text(category, exact=True).last
+    try:
+        option.click(timeout=5000)
+    except PlaywrightTimeout:
+        raise RuntimeError(f"카테고리 '{category}' 를 찾지 못했습니다. 블로그 관리에서 같은 이름으로 만들어 주세요.")
+    pause(0.5, 1.0)
+
+
+def write_and_publish(page, title, body, category=None, dry_run=False):
     page.goto(f"https://blog.naver.com/{NAVER_ID}?Redirect=Write")
     page.wait_for_load_state("domcontentloaded")
 
@@ -108,14 +135,17 @@ def write_and_publish(page, title, body, dry_run=False):
             page.keyboard.type(line, delay=random.randint(20, 50))
     pause(1.5, 2.5)
 
-    if dry_run:
+    # 발행 설정 창 열기 → (카테고리 선택) → 발행 확인
+    editor.locator("button[class*='publish_btn']").first.click()
+    pause()
+    if category:
+        select_category(editor, category)
+
+    if dry_run:  # 발행 확인은 누르지 않고 화면만 저장
         shot = BASE_DIR / f"preview_{time.strftime('%Y%m%d_%H%M%S')}.png"
         page.screenshot(path=str(shot), full_page=True)
         return shot.name
 
-    # 발행 → 발행 확인
-    editor.locator("button[class*='publish_btn']").first.click()
-    pause()
     editor.locator("button[class*='confirm_btn']").first.click()
 
     page.wait_for_url("**/PostView**", timeout=30000)
@@ -137,14 +167,14 @@ def run_auto_post(dry_run=False):
     if post is None:
         print("[INFO] posts/ 폴더에 발행할 글이 없습니다. 건너뜁니다.")
         return
-    path, title, body = post
+    path, category, title, body = post
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=HEADLESS)
         context = browser.new_context(viewport=VIEWPORT, storage_state=str(AUTH_FILE))
         page = context.new_page()
         try:
-            url = write_and_publish(page, title, body, dry_run)
+            url = write_and_publish(page, title, body, category, dry_run)
             # 갱신된 쿠키 저장 (세션 수명 연장)
             context.storage_state(path=str(AUTH_FILE))
         except Exception as e:
@@ -162,6 +192,13 @@ def run_auto_post(dry_run=False):
     PUBLISHED_DIR.mkdir(parents=True, exist_ok=True)
     shutil.move(str(path), PUBLISHED_DIR / path.name)
     print(f"[INFO] 발행 완료: '{title}' → {url}")
+
+
+def safe_collect():
+    try:
+        collect()
+    except Exception as e:
+        print(f"[ERROR] 게시판 글 수집 실패: {e}")
 
 
 def show_status():
@@ -185,9 +222,9 @@ def show_status():
 
     weekdays = "월화수목금토일"
     for f, slot in zip(queue, slots):
-        lines = f.read_text(encoding="utf-8").splitlines()
-        title = lines[0].strip() if lines else "(제목 없음)"
-        print(f"  {slot:%m/%d}({weekdays[slot.weekday()]}) {slot:%H:%M}  {title}  [{f.name}]")
+        category, title, _ = parse_post(f)
+        tag = f"<{category}> " if category else ""
+        print(f"  {slot:%m/%d}({weekdays[slot.weekday()]}) {slot:%H:%M}  {tag}{title or '(제목 없음)'}")
 
     if queue:
         print(f"\n대기열은 {slots[-1]:%m/%d %H:%M} 발행분까지입니다.")
@@ -200,9 +237,13 @@ def main():
     parser.add_argument("--login", action="store_true", help="직접 로그인하여 세션 저장")
     parser.add_argument("--once", action="store_true", help="즉시 1건 발행 후 종료")
     parser.add_argument("--dry-run", action="store_true", help="글을 에디터에 입력하고 스크린샷만 저장 (발행 안 함)")
+    parser.add_argument("--collect", action="store_true", help="보건복지부·건강보험공단 새 글을 posts/ 에 수집")
     parser.add_argument("--status", action="store_true", help="대기열과 예상 발행 일정 표시")
     args = parser.parse_args()
 
+    if args.collect:
+        collect(dry_run=args.dry_run)
+        return
     if args.status:
         show_status()
         return
@@ -217,6 +258,8 @@ def main():
         run_auto_post()
         return
 
+    safe_collect()
+    schedule.every().day.at(COLLECT_TIME).do(safe_collect)
     for t in SCHEDULE_TIMES:
         schedule.every().day.at(t).do(run_auto_post)
     print(f"[INFO] 네이버 블로그 1일 {len(SCHEDULE_TIMES)}회 자동 발행 스케줄러 활성화: {', '.join(SCHEDULE_TIMES)}")

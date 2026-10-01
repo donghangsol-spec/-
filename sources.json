@@ -1,0 +1,117 @@
+{
+  "boards": [
+    {
+      "key": "notice_law",
+      "org": "보건복지부",
+      "name": "훈령/예규/고시/지침",
+      "label": "고시",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10409020000&bid=0026",
+      "keywords": [
+        "장기요양",
+        "요양",
+        "평가",
+        "청구",
+        "노인",
+        "재가",
+        "수가",
+        "급여"
+      ],
+      "link_selector": "a[href*='act=view'][href*='list_no=']",
+      "id_param": "list_no",
+      "page_param": "nPage"
+    },
+    {
+      "key": "notice",
+      "org": "보건복지부",
+      "name": "공지사항",
+      "label": "공지",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10501010000&bid=0003",
+      "keywords": [
+        "장기요양",
+        "요양",
+        "평가",
+        "청구",
+        "노인",
+        "재가",
+        "수가",
+        "급여"
+      ],
+      "link_selector": "a[href*='act=view'][href*='list_no=']",
+      "id_param": "list_no",
+      "page_param": "nPage"
+    },
+    {
+      "key": "library",
+      "org": "보건복지부",
+      "name": "연구/조사/발간자료",
+      "label": "자료실",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10411010100&bid=0019",
+      "keywords": [
+        "장기요양",
+        "요양",
+        "평가",
+        "청구",
+        "노인",
+        "재가",
+        "수가",
+        "급여"
+      ],
+      "link_selector": "a[href*='act=view'][href*='list_no=']",
+      "id_param": "list_no",
+      "page_param": "nPage"
+    },
+    {
+      "key": "press",
+      "org": "보건복지부",
+      "name": "보도자료",
+      "label": "보도자료",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027",
+      "keywords": [
+        "장기요양",
+        "요양기관",
+        "평가",
+        "청구",
+        "수가"
+      ],
+      "link_selector": "a[href*='act=view'][href*='list_no=']",
+      "id_param": "list_no",
+      "page_param": "nPage"
+    },
+    {
+      "key": "ltc_eval",
+      "org": "국민건강보험공단",
+      "name": "장기요양기관 평가 공지·매뉴얼",
+      "label": "평가",
+      "url": "https://www.longtermcare.or.kr/npbs/cms/board/board/Board.jsp?communityKey=B0153",
+      "keywords": [],
+      "link_selector": "a[href*='act=VIEW' i][href*='boardId=']",
+      "id_param": "boardId",
+      "page_param": "pageNum"
+    },
+    {
+      "key": "ltc_notice",
+      "org": "국민건강보험공단",
+      "name": "노인장기요양보험 공지사항",
+      "label": "공지",
+      "url": "https://www.longtermcare.or.kr/npbs/cms/board/board/Board.jsp?communityKey=B0009",
+      "keywords": [
+        "평가",
+        "청구",
+        "고시",
+        "수가",
+        "급여",
+        "지침",
+        "매뉴얼",
+        "개정",
+        "제도",
+        "교육"
+      ],
+      "link_selector": "a[href*='act=VIEW' i][href*='boardId=']",
+      "id_param": "boardId",
+      "page_param": "pageNum"
+    }
+  ],
+  "pages": 1,
+  "max_content_chars": 2500,
+  "footer": "장기요양기관 평가·청구 실무 문의: 동행솔루션 042-673-3338 / donghangsol@naver.com"
+}
