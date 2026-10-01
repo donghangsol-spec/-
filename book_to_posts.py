@@ -3,8 +3,9 @@
     python book_to_posts.py 원고.md
 
 각 장(## 1 ~ ## 20)에 부록의 같은 번호 실습(### 실습 NN)을 붙여
-posts/10_SSS_book_NN.md 로 저장한다. SSS 는 발행 순서 번호로,
-연재 2화마다 건강한 음식 글(10_SSS_food_KK.md, SSS = 3K) 1편이 끼도록 비워 둔다. 마크다운 기호(**, ###, 표)는
+posts/10_SSS_book_NN.md 로 저장한다. SSS 는 발행 순서 번호로, 연재 2화마다
+건강한 음식 글(10_SSS_food_KK.md, SSS = 6K-3)과 의료기기 글(10_SSS_med_KK.md, SSS = 6K)이
+번갈아 1편씩 끼도록 비워 둔다. 마크다운 기호(**, ###, 표)는
 네이버 에디터에 그대로 보이지 않도록 일반 텍스트로 바꾼다.
 """
 
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit("사용법: python book_to_posts.py 원고.md")
     for n, text in build(sys.argv[1]).items():
-        slot = n + (n - 1) // 2  # 연재 2화 → 음식 글 1편 순서
+        slot = n + (n - 1) // 2  # 연재 2화 → 음식 또는 의료기기 글 1편 순서
         path = POSTS_DIR / f"10_{slot:03d}_book_{n:02d}.md"
         path.write_text(text, encoding="utf-8")
         print(f"[INFO] {path.name} ({len(text):,}자)")
