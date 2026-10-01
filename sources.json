@@ -1,0 +1,35 @@
+{
+  "boards": [
+    {
+      "key": "notice_law",
+      "name": "훈령/예규/고시/지침",
+      "label": "고시",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10409020000&bid=0026",
+      "keywords": ["장기요양", "요양", "평가", "청구", "노인", "재가", "수가", "급여"]
+    },
+    {
+      "key": "notice",
+      "name": "공지사항",
+      "label": "공지",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10501010000&bid=0003",
+      "keywords": ["장기요양", "요양", "평가", "청구", "노인", "재가", "수가", "급여"]
+    },
+    {
+      "key": "library",
+      "name": "연구/조사/발간자료",
+      "label": "자료실",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10411010100&bid=0019",
+      "keywords": ["장기요양", "요양", "평가", "청구", "노인", "재가", "수가", "급여"]
+    },
+    {
+      "key": "press",
+      "name": "보도자료",
+      "label": "보도자료",
+      "url": "https://www.mohw.go.kr/board.es?mid=a10503000000&bid=0027",
+      "keywords": ["장기요양", "요양기관", "평가", "청구", "수가"]
+    }
+  ],
+  "pages": 1,
+  "max_content_chars": 2500,
+  "footer": "장기요양기관 평가·청구 실무 문의: 동행솔루션 042-673-3338 / donghangsol@naver.com"
+}
