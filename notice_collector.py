@@ -108,6 +108,14 @@ def read_detail(page, url, max_chars):
     return body, files, find_date(page.inner_text("body"))
 
 
+def pick_category(cfg, board, title):
+    """category_rules 중 제목 키워드가 처음 맞는 규칙의 카테고리, 없으면 게시판·기본 카테고리."""
+    for rule in cfg.get("category_rules", []):
+        if any(k in title for k in rule["keywords"]):
+            return rule["category"]
+    return board.get("category", cfg.get("category"))
+
+
 def render_post(board, item, body, files, footer, category):
     out = [f"카테고리: {category}"] if category else []
     out += [f"[{board['org']} {board['label']}] {item['title']}", ""]
@@ -166,7 +174,7 @@ def collect(dry_run=False):
                 pid = post_id(it["url"], board["id_param"])
                 date_tag = (it["date"] or "0000-00-00").replace("-", "")
                 path = POSTS_DIR / f"00_news_{date_tag}_{board['key']}_{pid}.md"
-                path.write_text(render_post(board, it, body, files, cfg.get("footer", ""), board.get("category", cfg.get("category"))), encoding="utf-8")
+                path.write_text(render_post(board, it, body, files, cfg.get("footer", ""), pick_category(cfg, board, it["title"])), encoding="utf-8")
                 seen.add(f"{board['key']}:{pid}")
                 created += 1
         browser.close()
