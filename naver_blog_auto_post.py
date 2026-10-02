@@ -18,6 +18,7 @@ posts/published/ 로 옮긴다. 파일 첫 줄은 제목, 나머지는 본문.
 import argparse
 import os
 import random
+import re
 import shutil
 import time
 from datetime import datetime, timedelta
@@ -148,7 +149,9 @@ def write_and_publish(page, title, body, category=None, dry_run=False):
 
     editor.locator("button[class*='confirm_btn']").first.click()
 
-    page.wait_for_url("**/PostView**", timeout=30000)
+    # 발행되면 글 주소로 이동한다: blog.naver.com/아이디/글번호 또는 예전 형식 PostView
+    post_url = re.compile(rf"/{re.escape(NAVER_ID)}/\d+|PostView")
+    page.wait_for_url(post_url, timeout=30000)
     return page.url
 
 
