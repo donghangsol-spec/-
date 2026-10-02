@@ -119,20 +119,19 @@ def pick_category(cfg, board, title):
 def render_post(board, item, body, files, footer, category):
     out = [f"카테고리: {category}"] if category else []
     out += [f"[{board['org']} {board['label']}] {item['title']}", ""]
-    out.append(f"게시일: {item['date'] or '원문 참조'}")
-    out.append(f"출처: {board['org']} {board['name']}")
-    out.append(f"원문: {item['url']}")
-    out.append("")
+    out += ["| 구분 | 내용 |", "|---|---|",
+            f"| 게시일 | {item['date'] or '원문 참조'} |",
+            f"| 출처 | {board['org']} {board['name']} |", ""]
+    out += [f"**원문 바로가기:** {item['url']}", ""]
     if body:
-        out += ["주요 내용", body, ""]
+        out += ["## 주요 내용", "", body, ""]
     if files:
-        out.append("첨부파일 (원문 링크에서 내려받을 수 있습니다)")
-        out += [f"- {f}" for f in files]
-        out.append("")
+        out += ["## 첨부파일", ""] + [f"- {f}" for f in files]
+        out += ["", "※ 첨부파일은 원문 링크에서 내려받을 수 있습니다.", ""]
     out.append(f"※ 이 글은 {board['org']} 누리집에 게시된 공식 자료를 안내하기 위한 글입니다. "
                "정확한 내용과 시행일은 반드시 원문을 확인해 주세요.")
     if footer:
-        out += ["", footer]
+        out += ["", f"※ {footer}"]
     return "\n".join(out) + "\n"
 
 
@@ -141,7 +140,7 @@ def collect(dry_run=False):
     if cfg is None:
         raise SystemExit(f"[ERROR] {SOURCES_FILE.name} 이 없습니다.")
     seen = set(load_json(SEEN_FILE, []))
-    created = 0
+    created, new_files = 0, []
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -177,12 +176,19 @@ def collect(dry_run=False):
                 path.write_text(render_post(board, it, body, files, cfg.get("footer", ""), pick_category(cfg, board, it["title"])), encoding="utf-8")
                 seen.add(f"{board['key']}:{pid}")
                 created += 1
+                new_files.append(path)
         browser.close()
 
     if not dry_run:
         SEEN_FILE.parent.mkdir(parents=True, exist_ok=True)
         SEEN_FILE.write_text(json.dumps(sorted(seen), ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"[INFO] 새 글 {created}건을 posts/ 대기열에 추가했습니다.")
+    if new_files:  # 브라우저를 닫은 뒤 카드 이미지를 만든다
+        import post_images
+        from card_renderer import Renderer
+        with Renderer() as r:
+            for f in new_files:
+                post_images.process(f, r)
     return created
 
 
